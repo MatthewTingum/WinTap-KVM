@@ -463,6 +463,12 @@ struct kvm_pmu_event_filter {
 	__u64 events[0];
 };
 
+/* vmx_pt */
+struct vmx_pt_filter_iprs {
+        __u64 a;
+        __u64 b;
+};
+
 #define KVM_PMU_EVENT_ALLOW 0
 #define KVM_PMU_EVENT_DENY 1
 

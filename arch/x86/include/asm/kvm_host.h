@@ -1269,6 +1269,11 @@ struct kvm_x86_ops {
 	int (*enable_direct_tlbflush)(struct kvm_vcpu *vcpu);
 
 	void (*migrate_timers)(struct kvm_vcpu *vcpu);
+
+#ifdef CONFIG_KVM_VMX_PT
+        int (*setup_trace_fd)(struct kvm_vcpu *vcpu);
+        int (*vmx_pt_enabled)(void);
+#endif
 };
 
 struct kvm_x86_nested_ops {
