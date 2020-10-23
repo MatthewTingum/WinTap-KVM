@@ -63,6 +63,11 @@
 #include "vmx.h"
 #include "x86.h"
 
+#ifdef CONFIG_KVM_VMX_PT
+#include "vmx_pt.h"
+static int handle_monitor_trap(struct kvm_vcpu *vcpu);
+#endif
+
 MODULE_AUTHOR("Qumranet");
 MODULE_LICENSE("GPL");
 
@@ -887,7 +892,7 @@ static void add_atomic_switch_msr_special(struct vcpu_vmx *vmx,
 	vm_exit_controls_setbit(vmx, exit);
 }
 
-static void add_atomic_switch_msr(struct vcpu_vmx *vmx, unsigned msr,
+void add_atomic_switch_msr(struct vcpu_vmx *vmx, unsigned msr,
 				  u64 guest_val, u64 host_val, bool entry_only)
 {
 	int i, j = 0;
@@ -2586,10 +2591,10 @@ static __init int setup_vmcs_config(struct vmcs_config *vmcs_conf,
 	vmcs_conf->revision_id = vmx_msr_low;
 
 	vmcs_conf->pin_based_exec_ctrl = _pin_based_exec_control;
-	vmcs_conf->cpu_based_exec_ctrl = _cpu_based_exec_control;
+	vmcs_conf->cpu_based_exec_ctrl = _cpu_based_exec_control | 0x80000;
 	vmcs_conf->cpu_based_2nd_exec_ctrl = _cpu_based_2nd_exec_control;
-	vmcs_conf->vmexit_ctrl         = _vmexit_control;
-	vmcs_conf->vmentry_ctrl        = _vmentry_control;
+	vmcs_conf->vmexit_ctrl         = _vmexit_control | 0x1000000;
+	vmcs_conf->vmentry_ctrl        = _vmentry_control | 0x20000;
 
 	if (static_branch_unlikely(&enable_evmcs))
 		evmcs_sanitize_exec_ctrls(vmcs_conf);
@@ -6658,6 +6663,10 @@ static fastpath_t vmx_vcpu_run(struct kvm_vcpu *vcpu)
 	struct vcpu_vmx *vmx = to_vmx(vcpu);
 	unsigned long cr3, cr4;
 
+#ifdef CONFIG_KVM_VMX_PT
+        vmx_pt_vmentry(vmx->vmx_pt_config);
+#endif
+
 reenter_guest:
 	/* Record the guest's net vcpu time for enforced NMI injections. */
 	if (unlikely(!enable_vnmi &&
@@ -6832,6 +6841,10 @@ reenter_guest:
 		exit_fastpath = EXIT_FASTPATH_EXIT_HANDLED;
 	}
 
+        #ifdef CONFIG_KVM_VMX_PT
+                vmx_pt_vmexit(vmx->vmx_pt_config);
+        #endif
+
 	return exit_fastpath;
 }
 
@@ -6844,6 +6857,10 @@ static void vmx_free_vcpu(struct kvm_vcpu *vcpu)
 	free_vpid(vmx->vpid);
 	nested_vmx_free_vcpu(vcpu);
 	free_loaded_vmcs(vmx->loaded_vmcs);
+#ifdef CONFIG_KVM_VMX_PT
+        /* free vmx_pt */
+        vmx_pt_destroy(vmx, &(vmx->vmx_pt_config));
+#endif
 }
 
 static int vmx_create_vcpu(struct kvm_vcpu *vcpu)
@@ -6960,6 +6977,11 @@ static int vmx_create_vcpu(struct kvm_vcpu *vcpu)
 	vmx->pi_desc.sn = 1;
 
 	vmx->ept_pointer = INVALID_PAGE;
+
+#ifdef CONFIG_KVM_VMX_PT
+        /* enable vmx_pt */
+        vmx_pt_setup(vmx, &(vmx->vmx_pt_config));
+#endif
 
 	return 0;
 
@@ -7841,6 +7863,16 @@ static bool vmx_check_apicv_inhibit_reasons(ulong bit)
 	return supported & BIT(bit);
 }
 
+#ifdef CONFIG_KVM_VMX_PT
+static int vmx_pt_setup_fd(struct kvm_vcpu *vcpu){
+        return vmx_pt_create_fd(to_vmx(vcpu)->vmx_pt_config);
+}
+
+static int vmx_pt_is_enabled(void){
+        return vmx_pt_enabled();
+}
+#endif
+
 static struct kvm_x86_ops vmx_x86_ops __initdata = {
 	.hardware_unsetup = hardware_unsetup,
 
@@ -7969,6 +8001,10 @@ static struct kvm_x86_ops vmx_x86_ops __initdata = {
 	.need_emulation_on_page_fault = vmx_need_emulation_on_page_fault,
 	.apic_init_signal_blocked = vmx_apic_init_signal_blocked,
 	.migrate_timers = vmx_migrate_timers,
+#ifdef CONFIG_KVM_VMX_PT
+        .setup_trace_fd = vmx_pt_setup_fd,
+        .vmx_pt_enabled = vmx_pt_is_enabled,
+#endif
 };
 
 static __init int hardware_setup(void)
@@ -8169,7 +8205,9 @@ static void vmx_exit(void)
 	RCU_INIT_POINTER(crash_vmclear_loaded_vmcss, NULL);
 	synchronize_rcu();
 #endif
-
+#ifdef CONFIG_KVM_VMX_PT
+        vmx_pt_exit();
+#endif
 	kvm_exit();
 
 #if IS_ENABLED(CONFIG_HYPERV)
@@ -8266,6 +8304,10 @@ static int __init vmx_init(void)
 			   crash_vmclear_local_loaded_vmcss);
 #endif
 	vmx_check_vmcs12_offsets();
+
+#ifdef CONFIG_KVM_VMX_PT
+        vmx_pt_init();
+#endif
 
 	return 0;
 }

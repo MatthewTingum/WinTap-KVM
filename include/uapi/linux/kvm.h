@@ -238,7 +238,7 @@ struct kvm_hyperv_exit {
 #define KVM_EXIT_NMI              16
 #define KVM_EXIT_INTERNAL_ERROR   17
 #define KVM_EXIT_OSI              18
-#define KVM_EXIT_PAPR_HCALL	  19
+#define KVM_EXIT_PAPR_HCALL       19
 #define KVM_EXIT_S390_UCONTROL	  20
 #define KVM_EXIT_WATCHDOG         21
 #define KVM_EXIT_S390_TSCH        22
@@ -248,6 +248,22 @@ struct kvm_hyperv_exit {
 #define KVM_EXIT_IOAPIC_EOI       26
 #define KVM_EXIT_HYPERV           27
 #define KVM_EXIT_ARM_NISV         28
+
+#define HYPERCALL_KAFL_RAX_ID                   0x01f
+#define KVM_EXIT_KAFL_ACQUIRE                   100
+#define KVM_EXIT_KAFL_GET_PAYLOAD               101
+#define KVM_EXIT_KAFL_GET_PROGRAM               102
+#define KVM_EXIT_KAFL_GET_ARGV                  103
+#define KVM_EXIT_KAFL_RELEASE                   104
+#define KVM_EXIT_KAFL_SUBMIT_CR3                105
+#define KVM_EXIT_KAFL_SUBMIT_PANIC              106
+#define KVM_EXIT_KAFL_SUBMIT_KASAN              107
+#define KVM_EXIT_KAFL_PANIC                     108
+#define KVM_EXIT_KAFL_KASAN                     109
+#define KVM_EXIT_KAFL_LOCK                      110
+#define KVM_EXIT_KAFL_INFO                      111
+#define KVM_EXIT_KAFL_NEXT_PAYLOAD              112
+#define KVM_EXIT_KAFL_DEBUG                     113
 
 /* For KVM_EXIT_INTERNAL_ERROR */
 /* Emulate instruction failed. */
@@ -1685,5 +1701,35 @@ struct kvm_hyperv_eventfd {
 
 #define KVM_DIRTY_LOG_MANUAL_PROTECT_ENABLE    (1 << 0)
 #define KVM_DIRTY_LOG_INITIALLY_SET            (1 << 1)
+
+/*
+ * ioctls for vmx_pt fds
+ */
+#define KVM_VMX_PT_SETUP_FD             _IO(KVMIO,      0xd0)           /* apply vmx_pt fd (via vcpu fd ioctl)*/
+#define KVM_VMX_PT_CONFIGURE_ADDR0      _IOW(KVMIO,     0xd1, __u64)    /* configure IP-filtering for addr0_a & addr0_b */
+#define KVM_VMX_PT_CONFIGURE_ADDR1      _IOW(KVMIO,     0xd2, __u64)    /* configure IP-filtering for addr1_a & addr1_b */
+#define KVM_VMX_PT_CONFIGURE_ADDR2      _IOW(KVMIO,     0xd3, __u64)    /* configure IP-filtering for addr2_a & addr2_b */
+#define KVM_VMX_PT_CONFIGURE_ADDR3      _IOW(KVMIO,     0xd4, __u64)    /* configure IP-filtering for addr3_a & addr3_b */
+
+#define KVM_VMX_PT_CONFIGURE_CR3        _IOW(KVMIO,     0xd5, __u64)    /* setup CR3 filtering value */
+#define KVM_VMX_PT_ENABLE               _IO(KVMIO,      0xd6)           /* enable and lock configuration */ 
+#define KVM_VMX_PT_GET_TOPA_SIZE        _IOR(KVMIO,     0xd7, __u32)    /* get defined ToPA size */
+#define KVM_VMX_PT_DISABLE              _IO(KVMIO,      0xd8)           /* enable and lock configuration */ 
+#define KVM_VMX_PT_CHECK_TOPA_OVERFLOW  _IO(KVMIO,      0xd9)           /* check for ToPA overflow */
+
+#define KVM_VMX_PT_ENABLE_ADDR0         _IO(KVMIO,      0xaa)           /* enable IP-filtering for addr0 */
+#define KVM_VMX_PT_ENABLE_ADDR1         _IO(KVMIO,      0xab)           /* enable IP-filtering for addr1 */
+#define KVM_VMX_PT_ENABLE_ADDR2         _IO(KVMIO,      0xac)           /* enable IP-filtering for addr2 */
+#define KVM_VMX_PT_ENABLE_ADDR3         _IO(KVMIO,      0xad)           /* enable IP-filtering for addr3 */
+
+#define KVM_VMX_PT_DISABLE_ADDR0        _IO(KVMIO,      0xae)           /* disable IP-filtering for addr0 */
+#define KVM_VMX_PT_DISABLE_ADDR1        _IO(KVMIO,      0xaf)           /* disable IP-filtering for addr1 */
+#define KVM_VMX_PT_DISABLE_ADDR2        _IO(KVMIO,      0xe0)           /* disable IP-filtering for addr2 */
+#define KVM_VMX_PT_DISABLE_ADDR3        _IO(KVMIO,      0xe1)           /* disable IP-filtering for addr3 */
+
+#define KVM_VMX_PT_ENABLE_CR3           _IO(KVMIO,      0xe2)           /* enable CR3 filtering */
+#define KVM_VMX_PT_DISABLE_CR3          _IO(KVMIO,      0xe3)           /* disable CR3 filtering */
+
+#define KVM_VMX_PT_SUPPORTED            _IO(KVMIO,      0xe4)
 
 #endif /* __LINUX_KVM_H */

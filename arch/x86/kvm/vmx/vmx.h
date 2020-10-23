@@ -200,6 +200,9 @@ struct nested_vmx {
 
 struct vcpu_vmx {
 	struct kvm_vcpu       vcpu;
+#ifdef CONFIG_KVM_VMX_PT
+        struct vcpu_vmx_pt*   vmx_pt_config;
+#endif
 	u8                    fail;
 	u8		      msr_bitmap_mode;
 
